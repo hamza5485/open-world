@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: 'https://github.com/hamza5485/open-world'
+  base: 'https://hamza5485.github.io/open-world/'
 });
