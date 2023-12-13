@@ -30,7 +30,7 @@ const createScene = () => {
     sphere.position.y = 1;
 
     // Create a built-in "ground" shape
-    let ground = Mesh.CreateGround('ground1', 6, 6, 2, scene);
+    Mesh.CreateGround('ground1', 6, 6, 2, scene);
 
     return scene;
 };
