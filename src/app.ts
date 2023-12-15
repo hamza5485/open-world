@@ -37,13 +37,21 @@ export class App {
   private setupBeforeRender(): void {
     this.scene.onBeforeRenderObservable.add(() => {
       if (this.character.getMesh()) {
-        if (this.inputController.isKeyPressed('w')) {
+        const isShiftPressed = this.inputController.isKeyPressed('Shift');
+        const isMovingForward = this.inputController.isKeyPressed('w');
+        const isMovingLeft = this.inputController.isKeyPressed('a');
+        const isMovingRight = this.inputController.isKeyPressed('d');
+        const isMovingBackward = this.inputController.isKeyPressed('s');
+
+        if (isMovingForward && isShiftPressed) {
+          this.character.move(CharacterMovement.Run);
+        } else if (isMovingForward) {
           this.character.move(CharacterMovement.Walk);
-        } else if (this.inputController.isKeyPressed('a')) {
+        } else if (isMovingLeft) {
           this.character.move(CharacterMovement.Left);
-        } else if (this.inputController.isKeyPressed('d')) {
+        } else if (isMovingRight) {
           this.character.move(CharacterMovement.Right);
-        } else if (this.inputController.isKeyPressed('s')) {
+        } else if (isMovingBackward) {
           this.character.move(CharacterMovement.Backward);
         } else {
           this.character.move(CharacterMovement.Idle);
