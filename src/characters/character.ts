@@ -1,36 +1,44 @@
-import { Scene, SceneLoader, AbstractMesh, AnimationRange } from 'babylonjs';
+import {
+  Scene,
+  SceneLoader,
+  AbstractMesh,
+  AnimationRange,
+  Animatable,
+} from 'babylonjs';
 import { CameraController } from '../controllers/camera-controller';
 
 export enum CharacterMovement {
-  Idle,
-  Walk,
-  Run,
-  Left,
-  Right,
-  Backward,
+  Idle = 'Idle',
+  Walk = 'Walk',
+  Run = 'Run',
+  Left = 'Left',
+  Right = 'Right',
+  Backward = 'Backward',
 }
+
+const MESH_BASE_PATH =
+  process.env.NODE_ENV === 'production' ? '/open-world/meshes/' : '/meshes/';
 
 export class Character {
   private mesh: AbstractMesh | undefined;
   private currentMovement: CharacterMovement | null = null;
   private animations: {
-    idle: AnimationRange | null;
-    walk: AnimationRange | null;
-    run: AnimationRange | null;
-    left: AnimationRange | null;
-    right: AnimationRange | null;
+    [key in CharacterMovement]: AnimationRange | null;
   };
+  private blendDuration = 0.3;
+  private activeAnimations: Animatable[] = [];
 
   constructor(
     private scene: Scene,
     private cameraController: CameraController
   ) {
     this.animations = {
-      idle: null,
-      walk: null,
-      run: null,
-      left: null,
-      right: null,
+      Idle: null,
+      Walk: null,
+      Run: null,
+      Left: null,
+      Right: null,
+      Backward: null,
     };
     this.setupCharacter();
   }
@@ -38,17 +46,18 @@ export class Character {
   private setupCharacter(): void {
     SceneLoader.ImportMesh(
       '',
-      '/meshes/',
+      MESH_BASE_PATH,
       'dummy3.babylon',
       this.scene,
       (newMeshes, _, skeletons) => {
         const skeleton = skeletons[0];
         this.animations = {
-          idle: skeleton.getAnimationRange('YBot_Idle'),
-          walk: skeleton.getAnimationRange('YBot_Walk'),
-          run: skeleton.getAnimationRange('YBot_Run'),
-          left: skeleton.getAnimationRange('YBot_LeftStrafeWalk'),
-          right: skeleton.getAnimationRange('YBot_RightStrafeWalk'),
+          Idle: skeleton.getAnimationRange('YBot_Idle'),
+          Walk: skeleton.getAnimationRange('YBot_Walk'),
+          Run: skeleton.getAnimationRange('YBot_Run'),
+          Left: skeleton.getAnimationRange('YBot_LeftStrafeWalk'),
+          Right: skeleton.getAnimationRange('YBot_RightStrafeWalk'),
+          Backward: skeleton.getAnimationRange('YBot_Walk'),
         };
         this.mesh = newMeshes[0];
         this.mesh.scaling.setAll(0.5);
@@ -63,43 +72,41 @@ export class Character {
 
   public move(movementType: CharacterMovement): void {
     if (this.currentMovement !== movementType) {
+      this.startTransition(movementType);
       this.currentMovement = movementType;
-      switch (movementType) {
-        case CharacterMovement.Idle:
-          this.animate(this.animations.idle);
-          break;
-        case CharacterMovement.Walk:
-          this.animate(this.animations.walk);
-          break;
-        case CharacterMovement.Backward:
-          this.animate(this.animations.walk, true);
-          break;
-        case CharacterMovement.Run:
-          this.animate(this.animations.run);
-          break;
-        case CharacterMovement.Left:
-          this.animate(this.animations.left);
-          break;
-        case CharacterMovement.Right:
-          this.animate(this.animations.right);
-          break;
-      }
     }
   }
 
-  private animate(
-    animation: AnimationRange | null,
-    reverse: boolean = false
-  ): void {
-    if (this.mesh && animation) {
-      const speedRatio = reverse ? -1 : 1;
-      this.scene.beginAnimation(
-        this.mesh,
-        animation.from,
-        animation.to,
+  private startTransition(movementType: CharacterMovement): void {
+    const newAnimation = this.animations[movementType];
+    if (this.mesh && newAnimation) {
+      const isReverse = movementType === CharacterMovement.Backward;
+      const speedRatio = isReverse ? -1 : 1;
+      const newAnimatable = this.scene.beginWeightedAnimation(
+        this.mesh.skeleton,
+        newAnimation.from,
+        newAnimation.to,
+        0,
         true,
         speedRatio
       );
+
+      let elapsedTime = 0;
+      const interval = setInterval(() => {
+        elapsedTime += this.scene.getEngine().getDeltaTime() / 1000;
+        const blendFactor = Math.min(elapsedTime / this.blendDuration, 1);
+
+        newAnimatable.weight = blendFactor;
+        this.activeAnimations.forEach(
+          (anim) => (anim.weight = 1 - blendFactor)
+        );
+
+        if (blendFactor === 1) {
+          this.activeAnimations.forEach((anim) => anim.stop());
+          this.activeAnimations = [newAnimatable];
+          clearInterval(interval);
+        }
+      }, 1);
     }
   }
 }
