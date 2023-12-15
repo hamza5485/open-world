@@ -12,3 +12,7 @@ body {
   height: 100vh;
   display: block;
 }
+
+canvas:focus {
+  outline: none;
+}
