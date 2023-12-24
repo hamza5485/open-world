@@ -24,6 +24,7 @@ export class CameraController {
     camera.lowerRadiusLimit = 2.5;
     camera.upperRadiusLimit = 6;
     camera.wheelDeltaPercentage = 0.01;
+    camera.upperBetaLimit = Math.PI / 2.3;
     camera.attachControl(this.canvas, true);
 
     return camera;
